@@ -20,7 +20,7 @@ import VerifyEmailPage from './components/VerifyEmailPage';
 import AIAssistant from './components/AIAssistant';
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Student } from './types';
-import { Ghost, RefreshCcw, Loader2, Layout, Users, Book, Trophy, MessageSquareCode, User, Zap, Inbox, Bell, Menu } from 'lucide-react';
+import { Ghost, RefreshCcw, Loader2, Layout, Users, Book, Trophy, MessageSquareCode, User, Zap, Inbox, Bell, Menu, Video, Calendar, MonitorPlay, MessageSquare, StickyNote, FolderOpen, History, Star, UserPlus, Clock, Target } from 'lucide-react';
 
 const isProfileComplete = (profile: Student | null): boolean => {
   if (!profile) return false;
@@ -394,11 +394,146 @@ const MainApp: React.FC<{
                         </div>
                       } />
                       <Route path="/marketplace" element={
-                        <div className="h-[70vh] flex flex-col items-center justify-center text-center p-12 space-y-8">
-                          <h2 className="text-8xl font-black text-slate-100 dark:text-slate-800 tracking-tighter uppercase italic select-none">V2 CORE</h2>
-                          <div className="space-y-2">
-                            <p className="text-indigo-600 font-black tracking-[0.4em] uppercase text-xs">Unlocking Next Quarter</p>
-                            <p className="text-slate-400 font-medium text-sm">Exclusive learning assets and badge upgrades.</p>
+                        <div className="flex flex-col items-center justify-start text-center py-8 space-y-12 w-full max-w-6xl mx-auto min-h-[70vh]">
+                          <div className="space-y-4">
+                            <h2 className="text-6xl md:text-8xl font-black text-slate-100 dark:text-slate-800/50 tracking-tighter uppercase italic select-none">V2 CORE</h2>
+                            <div className="space-y-2">
+                              <p className="text-indigo-600 font-black tracking-[0.4em] uppercase text-xs">Unlocking Next Quarter</p>
+                              <p className="text-slate-400 font-medium text-sm">Exclusive learning assets and badge upgrades.</p>
+                            </div>
+                          </div>
+
+                          <div className="w-full grid grid-cols-1 xl:grid-cols-5 gap-8 text-left mt-8">
+                            {/* SKILLSWAP MEET */}
+                            <div className="xl:col-span-3 glass p-6 md:p-10 rounded-[2.5rem] border-white/50 dark:border-white/5 shadow-2xl relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-500">
+                              <div className="absolute top-0 right-0 p-6">
+                                <span className="px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest rounded-full shadow-sm">Coming Soon</span>
+                              </div>
+                              
+                              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                                <Video size={32} />
+                              </div>
+                              
+                              <h3 className="text-3xl font-black mb-3 tracking-tight">SkillSwap Meet</h3>
+                              <p className="text-slate-500 dark:text-slate-400 font-medium mb-10 max-w-xl">Real-time skill exchange sessions designed to make peer learning more interactive and collaborative.</p>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><Clock size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Meet Now</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Start an instant meeting after the swap is accepted. Both participants must approve before joining.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><Calendar size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Schedule Meet</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Schedule a session for a future date and time. Includes topic/reason and meeting duration.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><Video size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Video & Voice</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Real-time video and audio meetings powered by Jitsi for high-quality communication.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><MonitorPlay size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Screen Sharing</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Share your screen for coding, demonstrations, tutorials, and technical discussions.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><MessageSquare size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">SkillSwap Chat</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Dedicated chat alongside the meeting for dropping quick snippets and links.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><StickyNote size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Shared Notes</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Both participants can collaboratively edit notes. Notes automatically save to SkillSwap history.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><FolderOpen size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Shared Resources</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Easily share useful links, learning materials, and resources during the Meet.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><History size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Meet History</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Completed meetings are recorded with participants, topic, duration, notes, and resources.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><Star size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Completion & Feedback</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">After the session, show a simple completion state and allow participants to provide quick feedback.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded-xl"><Bell size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Notifications</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Notify participants when an approved meeting is starting with a clear "Join Meet" action.</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* GROUP LEARNING */}
+                            <div className="xl:col-span-2 glass p-6 md:p-10 rounded-[2.5rem] border-white/50 dark:border-white/5 shadow-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 flex flex-col">
+                              <div className="absolute top-0 right-0 p-6">
+                                <span className="px-4 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-widest rounded-full shadow-sm">Coming Soon</span>
+                              </div>
+                              
+                              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/50 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                                <UserPlus size={32} />
+                              </div>
+                              
+                              <h3 className="text-3xl font-black mb-3 tracking-tight">Group Learning</h3>
+                              <p className="text-slate-500 dark:text-slate-400 font-medium mb-10">Invite another SkillSwap member to join your learning session for small-group collaborative exchanges.</p>
+                              
+                              <div className="grid grid-cols-1 gap-6">
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-xl"><UserPlus size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Add Member</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Invite another SkillSwap member to join your learning session.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-xl"><Users size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Permission Controlled</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">The invitation is permission-controlled. Only approved SkillSwap users can enter the private Meet.</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-4 items-start">
+                                  <div className="mt-1 text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-xl"><Target size={20} /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Small-Group Focus</h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">Optimized for 2-5 participants for maximum learning efficiency and focused discussions.</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-auto pt-10">
+                                <div className="w-full py-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center bg-white/30 dark:bg-slate-900/30">
+                                  <p className="text-xs font-black tracking-widest uppercase text-slate-400">Future Expansion Module</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       } />
