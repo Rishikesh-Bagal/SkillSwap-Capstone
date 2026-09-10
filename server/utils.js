@@ -30,7 +30,7 @@ export const dayQuizSchema = z.object({
 });
 export const insightSchema = z.object({ skills: z.array(z.string().trim().min(1).max(100).transform(sanitizeText)).max(20).optional().default([]) });
 export const createSwapRequestSchema = z.object({
-  receiverUid: z.string().trim().min(1),
+  receiverUid: z.string().trim().min(10).max(100),
   skillOffered: z.string().trim().min(1).max(100).transform(sanitizeText),
   skillWanted: z.string().trim().min(1).max(100).transform(sanitizeText)
 });
@@ -41,7 +41,12 @@ export const updateSessionSchema = z.object({
   status: z.enum(['COMPLETED', 'CANCELLED'])
 });
 export const createReviewSchema = z.object({
-  sessionId: z.string().trim().min(1),
+  sessionId: z.string().cuid(),
   rating: z.number().int().min(1).max(5),
   comment: z.string().trim().max(1000).optional().nullable().transform(val => val ? sanitizeText(val) : val)
+});
+export const completeDaySchema = z.object({
+  skill: z.string().trim().min(1).max(100).transform(sanitizeText),
+  dayNumber: z.number().int().min(1).max(30),
+  score: z.number().min(0).max(10)
 });

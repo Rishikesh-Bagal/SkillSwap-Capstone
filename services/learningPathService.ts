@@ -4,6 +4,7 @@ import { LearningPath, RoadmapDay } from '../types';
 import { aiService } from './aiService';
 import { firestoreService } from './firestoreService';
 import { streakService } from './streakService';
+import { apiService } from './apiService';
 
 export const learningPathService = {
   /**
@@ -120,84 +121,15 @@ export const learningPathService = {
   },
 
   /**
-   * Completes a day, updating the current progress and unlocking the next day if applicable.
+   * Completes a day via the backend API.
    */
   completeDay: async (userId: string, skill: string, dayNumber: number, score: number = 0): Promise<{ path: LearningPath, xpAwarded: number, passed: boolean }> => {
-    const existing = await learningPathService.getLearningPath(userId, skill);
-    if (!existing) throw new Error("Roadmap not found.");
-
-    // Strict XP Rules
-    const passed = score >= 8;
-    let xpAwarded = 0;
-    
-    if (passed) {
-      if (score === 8) xpAwarded = 40;
-      else if (score === 9) xpAwarded = 45;
-      else if (score === 10) xpAwarded = 50;
-      
-      // Authoritative daily streak increment - executes Firebase transaction instantly
-      await streakService.recordLearningActivity(userId, 'quiz');
-    }
-
-    let updated = false;
-
-    // Check Duplicate XP Protection
-    // A user can only get XP and unlock next day if they are completing the exact highest unlocked day for the first time.
-    const isFirstTimePass = passed && dayNumber === existing.highestUnlockedDay;
-
-    if (isFirstTimePass) {
-      if (existing.highestUnlockedDay < 30) {
-        existing.highestUnlockedDay += 1;
-      }
-      updated = true;
-      
-      // Update User XP
-      if (xpAwarded > 0) {
-        const user = await firestoreService.getUser(userId);
-        if (user) {
-          const newQuizHistory = [...(user.quizHistory || []), {
-            date: new Date().toLocaleDateString(),
-            score: score,
-            pointsEarned: xpAwarded
-          }];
-          await firestoreService.updateUser(userId, { 
-            points: (user.points || 0) + xpAwarded,
-            quizHistory: newQuizHistory
-          });
-        }
-      }
-    } else {
-      // If retaking or already passed, no XP awarded again
-      xpAwarded = 0;
-    }
-
-    // Always update currentDay to the next day if we completed our current day and passed
-    if (passed && dayNumber === existing.currentDay && existing.currentDay < 30) {
-      existing.currentDay += 1;
-      updated = true;
-    }
-    
-    // Mark the day itself as completed with score and xp in the roadmapDays array
-    const dayIndex = dayNumber - 1;
-    if (dayIndex >= 0 && dayIndex < existing.roadmapDays.length) {
-       existing.roadmapDays[dayIndex].passed = passed || existing.roadmapDays[dayIndex].passed;
-       existing.roadmapDays[dayIndex].bestScore = Math.max(existing.roadmapDays[dayIndex].bestScore || 0, score);
-       if (isFirstTimePass) {
-         existing.roadmapDays[dayIndex].xpAwarded = xpAwarded;
-         existing.roadmapDays[dayIndex].completedAt = Date.now();
-       }
-       updated = true;
-    }
-    
-    if (updated) {
-      const docRef = doc(db, 'learningPaths', existing.id);
-      await setDoc(docRef, { 
-        highestUnlockedDay: existing.highestUnlockedDay,
-        currentDay: existing.currentDay,
-        roadmapDays: existing.roadmapDays
-      }, { merge: true });
-    }
-    
-    return { path: existing, xpAwarded, passed };
+    // Calling the secure backend API
+    const result = await apiService.completeLearningDay(skill, dayNumber, score);
+    return {
+      path: result.path as LearningPath,
+      xpAwarded: result.xpAwarded,
+      passed: result.passed
+    };
   }
 };

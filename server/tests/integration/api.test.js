@@ -1,5 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
+
+vi.mock('../../middleware/auth.js', () => ({
+  requireAuth: (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: Missing or invalid Authorization header' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    if (token === 'invalid_fake_token') {
+      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+    req.user = { uid: 'mock-uid', email: 'mock@example.com' };
+    next();
+  },
+  initAuth: () => {}
+}));
+
 import { app } from '../../index.js';
 
 describe('API Integration Tests', () => {
@@ -8,6 +25,7 @@ describe('API Integration Tests', () => {
     it('returns 400 Bad Request for missing required fields (POST /api/resources)', async () => {
       const res = await request(app)
         .post('/api/resources')
+        .set('Authorization', 'Bearer valid_token')
         .send({}); // Missing 'skill'
         
       expect(res.status).toBe(400);
@@ -19,6 +37,7 @@ describe('API Integration Tests', () => {
     it('returns 400 Bad Request for invalid field types (POST /api/resources)', async () => {
       const res = await request(app)
         .post('/api/resources')
+        .set('Authorization', 'Bearer valid_token')
         .send({ skill: 123 }); // skill should be a string
         
       expect(res.status).toBe(400);
@@ -27,6 +46,7 @@ describe('API Integration Tests', () => {
     it('returns 400 Bad Request for oversized input (POST /api/chat)', async () => {
       const res = await request(app)
         .post('/api/chat')
+        .set('Authorization', 'Bearer valid_token')
         .send({ query: 'A'.repeat(501) }); // max is 500
         
       expect(res.status).toBe(400);
@@ -36,6 +56,7 @@ describe('API Integration Tests', () => {
     it('returns 400 Bad Request for missing array elements (POST /api/day-content)', async () => {
       const res = await request(app)
         .post('/api/day-content')
+        .set('Authorization', 'Bearer valid_token')
         .send({
           skill: 'React',
           dayNumber: 1,
@@ -50,6 +71,7 @@ describe('API Integration Tests', () => {
     it('returns 400 Bad Request for oversized array (POST /api/day-quiz)', async () => {
       const res = await request(app)
         .post('/api/day-quiz')
+        .set('Authorization', 'Bearer valid_token')
         .send({
           skill: 'React',
           dayNumber: 1,
@@ -66,6 +88,7 @@ describe('API Integration Tests', () => {
     it('returns 200 OK and valid JSON array for POST /api/resources', async () => {
       const res = await request(app)
         .post('/api/resources')
+        .set('Authorization', 'Bearer valid_token')
         .send({ skill: 'React' });
         
       expect(res.status).toBe(200);

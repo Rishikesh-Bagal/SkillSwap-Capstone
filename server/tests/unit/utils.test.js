@@ -72,7 +72,7 @@ describe('Validation (Zod Schemas)', () => {
   });
 
   it('createReviewSchema allows nullable/optional comment', () => {
-    const res = createReviewSchema.parse({ sessionId: '123', rating: 5 });
+    const res = createReviewSchema.parse({ sessionId: 'clg1234560000010000000000', rating: 5 });
     expect(res.rating).toBe(5);
     expect(res.comment).toBeUndefined();
   });

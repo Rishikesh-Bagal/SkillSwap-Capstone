@@ -136,9 +136,10 @@ export const aiService = {
    * Returns static curated resource links.
    */
   getWebResources: async (skill: string): Promise<LearningResource[]> => {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/api/resources`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ skill })
     });
     
@@ -160,9 +161,10 @@ export const aiService = {
   ): Promise<string> => {
     if (!skills.length) return "Start learning new skills to get insights!";
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE}/api/insight`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ skills }),
         signal
       });

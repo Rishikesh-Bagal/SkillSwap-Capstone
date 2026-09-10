@@ -30,7 +30,8 @@ export const requireAuth = async (req, res, next) => {
   const token = authHeader.split('Bearer ')[1];
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const checkRevoked = true;
+    const decodedToken = await getAuth().verifyIdToken(token, checkRevoked);
     req.user = { uid: decodedToken.uid, email: decodedToken.email };
     next();
   } catch (error) {

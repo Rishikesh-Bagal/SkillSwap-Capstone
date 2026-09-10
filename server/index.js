@@ -1,17 +1,20 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { z } from "zod";
-import { buildSafePrompt, chatSchema, skillSchema, insightSchema, createSwapRequestSchema, respondSwapRequestSchema, updateSessionSchema, createReviewSchema, dayContentSchema, dayQuizSchema } from "./utils.js";
+import { buildSafePrompt, chatSchema, skillSchema, insightSchema, createSwapRequestSchema, respondSwapRequestSchema, updateSessionSchema, createReviewSchema, dayContentSchema, dayQuizSchema, completeDaySchema } from "./utils.js";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import prisma from "./prismaClient.js";
 import { requireAuth, initAuth } from "./middleware/auth.js";
+import { getFirestore } from "firebase-admin/firestore";
 
 dotenv.config();
 
 initAuth();
 
 const app = express();
+app.use(helmet());
 
 /* ================= CORS FIX ================= */
 const allowedOrigins = ['https://skillswap-grow.netlify.app', 'http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'];
@@ -52,14 +55,20 @@ const aiLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many AI requests, please try again later." }
+  message: { error: "Too many AI requests, please try again later." },
+  keyGenerator: (req) => {
+    return req.user ? req.user.uid : req.ip;
+  }
 });
 
 app.use("/api", generalLimiter);
-app.use("/api/chat", aiLimiter);
-app.use("/api/quiz", aiLimiter);
-app.use("/api/day-quiz", aiLimiter);
-app.use("/api/roadmap", aiLimiter);
+app.use("/api/chat", requireAuth, aiLimiter);
+app.use("/api/quiz", requireAuth, aiLimiter);
+app.use("/api/day-quiz", requireAuth, aiLimiter);
+app.use("/api/roadmap", requireAuth, aiLimiter);
+app.use("/api/day-content", requireAuth, aiLimiter);
+app.use("/api/insight", requireAuth, aiLimiter);
+app.use("/api/resources", requireAuth, generalLimiter);
 
 const validateRequest = (schema) => (req, res, next) => {
   try {
@@ -314,19 +323,68 @@ app.post("/api/swap-requests", requireAuth, validateRequest(createSwapRequestSch
       return res.status(400).json({ error: "Cannot request a swap with yourself." });
     }
 
-    await ensureUser(senderUid);
-    await ensureUser(receiverUid);
+    try {
+      await ensureUser(senderUid);
+      await ensureUser(receiverUid);
 
-    const newRequest = await prisma.skillSwapRequest.create({
-      data: {
-        senderUid,
-        receiverUid,
-        skillOffered,
-        skillWanted
+      const newRequest = await prisma.$transaction(async (tx) => {
+        const existingPending = await tx.skillSwapRequest.findFirst({
+          where: {
+            status: "PENDING",
+            OR: [
+              { senderUid, receiverUid },
+              { senderUid: receiverUid, receiverUid: senderUid }
+            ]
+          }
+        });
+        if (existingPending) {
+          throw new Error("PENDING_EXISTS");
+        }
+
+        const recentSession = await tx.session.findFirst({
+          where: {
+            AND: [
+              {
+                OR: [
+                  { tutorUid: senderUid, learnerUid: receiverUid },
+                  { tutorUid: receiverUid, learnerUid: senderUid }
+                ]
+              },
+              {
+                OR: [
+                  { status: "SCHEDULED" },
+                  { status: "COMPLETED", updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }
+                ]
+              }
+            ]
+          }
+        });
+        if (recentSession) {
+          throw new Error("RECENT_SESSION");
+        }
+
+        return await tx.skillSwapRequest.create({
+          data: {
+            senderUid,
+            receiverUid,
+            skillOffered,
+            skillWanted
+          }
+        });
+      }, {
+        isolationLevel: 'Serializable'
+      });
+
+      res.json(newRequest);
+    } catch (txError) {
+      if (txError.message === "PENDING_EXISTS") {
+        return res.status(400).json({ error: "A pending request already exists between you and this user." });
       }
-    });
-
-    res.json(newRequest);
+      if (txError.message === "RECENT_SESSION") {
+        return res.status(429).json({ error: "You can only have one active or completed session with this user per 24 hours." });
+      }
+      throw txError; // let outer catch handle it
+    }
   } catch (error) {
     console.error("CREATE REQUEST ERROR:", error);
     res.status(500).json({ error: "Failed to create request." });
@@ -377,6 +435,28 @@ app.patch("/api/swap-requests/:id", requireAuth, validateRequest(respondSwapRequ
 
     // If accepted, auto-create a session
     if (newStatus === 'ACCEPTED') {
+      const recentSession = await prisma.session.findFirst({
+        where: {
+          AND: [
+            {
+              OR: [
+                { tutorUid: request.senderUid, learnerUid: request.receiverUid },
+                { tutorUid: request.receiverUid, learnerUid: request.senderUid }
+              ]
+            },
+            {
+              OR: [
+                { status: "SCHEDULED" },
+                { status: "COMPLETED", updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }
+              ]
+            }
+          ]
+        }
+      });
+      if (recentSession) {
+        return res.status(429).json({ error: "Cannot accept. You already have an active or recently completed session with this user." });
+      }
+
       await prisma.session.create({
         data: {
           requestId: id,
@@ -504,6 +584,105 @@ app.post("/api/reviews", requireAuth, validateRequest(createReviewSchema), async
   } catch (error) {
     console.error("CREATE REVIEW ERROR:", error);
     res.status(500).json({ error: "Failed to create review or you already reviewed this session." });
+  }
+});
+
+// 3.5 Learning Path XP
+app.post("/api/learning-path/complete", requireAuth, validateRequest(completeDaySchema), async (req, res) => {
+  try {
+    const { skill, dayNumber, score } = req.body;
+    const uid = req.user.uid;
+    const adminDb = getFirestore();
+    
+    const result = await adminDb.runTransaction(async (t) => {
+      const normalized = skill.trim().toLowerCase().replace(/\+/g, 'plus').replace(/#/g, 'sharp').replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      const pathId = `${uid}_${normalized}`;
+      
+      const pathRef = adminDb.collection('learningPaths').doc(pathId);
+      const pathDoc = await t.get(pathRef);
+      if (!pathDoc.exists) throw new Error("Path not found");
+      
+      const pathData = pathDoc.data();
+      const passed = score >= 8;
+      let xpAwarded = 0;
+      
+      const isFirstTimePass = passed && dayNumber === pathData.highestUnlockedDay;
+      
+      if (isFirstTimePass) {
+        if (score === 8) xpAwarded = 40;
+        else if (score === 9) xpAwarded = 45;
+        else if (score === 10) xpAwarded = 50;
+        
+        pathData.highestUnlockedDay = Math.min(30, pathData.highestUnlockedDay + 1);
+      }
+      
+      if (passed && dayNumber === pathData.currentDay && pathData.currentDay < 30) {
+        pathData.currentDay += 1;
+      }
+      
+      const dayIndex = dayNumber - 1;
+      if (dayIndex >= 0 && dayIndex < pathData.roadmapDays.length) {
+         pathData.roadmapDays[dayIndex].passed = passed || pathData.roadmapDays[dayIndex].passed;
+         pathData.roadmapDays[dayIndex].bestScore = Math.max(pathData.roadmapDays[dayIndex].bestScore || 0, score);
+         if (isFirstTimePass) {
+           pathData.roadmapDays[dayIndex].xpAwarded = xpAwarded;
+           pathData.roadmapDays[dayIndex].completedAt = Date.now();
+         }
+      }
+      
+      const userRef = adminDb.collection('users').doc(uid);
+      const userDoc = await t.get(userRef);
+      if (!userDoc.exists) throw new Error("User not found");
+      
+      const userData = userDoc.data();
+      let newStreak = typeof userData.streak === 'number' ? userData.streak : 0;
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      if (passed) {
+        const lastActiveDateStr = userData.lastActiveDate;
+        if (!lastActiveDateStr) {
+          newStreak = 1;
+        } else if (lastActiveDateStr !== todayStr) {
+           const [tY, tM, tD] = todayStr.split('-').map(Number);
+           const todayUTC = Date.UTC(tY, tM - 1, tD);
+           const [lY, lM, lD] = lastActiveDateStr.split('-').map(Number);
+           const lastDateUTC = Date.UTC(lY, lM - 1, lD);
+           const diffDays = Math.round((todayUTC - lastDateUTC) / (1000 * 60 * 60 * 24));
+           if (diffDays === 1) newStreak += 1;
+           else if (diffDays > 1) newStreak = 1;
+        }
+      }
+      
+      if (passed || isFirstTimePass) {
+        const newQuizHistory = [...(userData.quizHistory || [])];
+        if (isFirstTimePass && xpAwarded > 0) {
+          newQuizHistory.push({
+            date: new Date().toLocaleDateString(),
+            score: score,
+            pointsEarned: xpAwarded
+          });
+        }
+        t.update(userRef, {
+          points: (userData.points || 0) + xpAwarded,
+          quizHistory: newQuizHistory,
+          streak: newStreak,
+          lastActiveDate: todayStr
+        });
+      }
+      
+      t.update(pathRef, {
+        highestUnlockedDay: pathData.highestUnlockedDay,
+        currentDay: pathData.currentDay,
+        roadmapDays: pathData.roadmapDays
+      });
+      
+      return { path: pathData, xpAwarded, passed, newStreak };
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Complete Day Error:", error);
+    res.status(400).json({ error: error.message });
   }
 });
 

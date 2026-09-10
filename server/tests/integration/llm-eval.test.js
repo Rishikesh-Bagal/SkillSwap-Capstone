@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
+
+vi.mock('../../middleware/auth.js', () => ({
+  requireAuth: (req, res, next) => {
+    req.user = { uid: 'mock-uid', email: 'mock@example.com' };
+    next();
+  },
+  initAuth: () => {}
+}));
+
 import { app } from '../../index.js';
 
 describe('LLM Evaluation Tests (Structural Validation)', () => {
@@ -9,6 +18,7 @@ describe('LLM Evaluation Tests (Structural Validation)', () => {
   it('evaluates /api/quiz structure for "React"', async () => {
     const res = await request(app)
       .post('/api/quiz')
+      .set('Authorization', 'Bearer valid_token')
       .send({ skill: 'React' });
       
     expect(res.status).toBe(200);
@@ -29,6 +39,7 @@ describe('LLM Evaluation Tests (Structural Validation)', () => {
   it('evaluates /api/roadmap structure for "Node.js"', async () => {
     const res = await request(app)
       .post('/api/roadmap')
+      .set('Authorization', 'Bearer valid_token')
       .send({ skill: 'Node.js' });
       
     expect(res.status).toBe(200);
@@ -53,6 +64,7 @@ describe('LLM Evaluation Tests (Structural Validation)', () => {
   it('evaluates /api/day-content structure for "React"', async () => {
     const res = await request(app)
       .post('/api/day-content')
+      .set('Authorization', 'Bearer valid_token')
       .send({
         skill: 'React',
         dayNumber: 1,
@@ -64,23 +76,20 @@ describe('LLM Evaluation Tests (Structural Validation)', () => {
     expect(typeof res.body).toBe('object');
     expect(res.body).not.toBeNull();
     
-    expect(res.body).toHaveProperty('summary');
-    expect(typeof res.body.summary).toBe('string');
-    expect(res.body).toHaveProperty('keyConcepts');
-    expect(Array.isArray(res.body.keyConcepts)).toBe(true);
-    if (res.body.keyConcepts.length > 0) {
-      expect(res.body.keyConcepts[0]).toHaveProperty('concept');
-      expect(res.body.keyConcepts[0]).toHaveProperty('explanation');
-    }
-    expect(res.body).toHaveProperty('practicalExercise');
-    expect(typeof res.body.practicalExercise).toBe('string');
-    expect(res.body).toHaveProperty('additionalResources');
-    expect(Array.isArray(res.body.additionalResources)).toBe(true);
+    expect(res.body).toHaveProperty('explanation');
+    expect(typeof res.body.explanation).toBe('string');
+    expect(res.body).toHaveProperty('examples');
+    expect(Array.isArray(res.body.examples)).toBe(true);
+    expect(res.body).toHaveProperty('task');
+    expect(typeof res.body.task).toBe('string');
+    expect(res.body).toHaveProperty('takeaways');
+    expect(Array.isArray(res.body.takeaways)).toBe(true);
   }, TIMEOUT);
 
   it('evaluates /api/day-quiz structure for "Node.js"', async () => {
     const res = await request(app)
       .post('/api/day-quiz')
+      .set('Authorization', 'Bearer valid_token')
       .send({
         skill: 'Node.js',
         dayNumber: 1,

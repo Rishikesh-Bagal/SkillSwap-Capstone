@@ -87,5 +87,19 @@ export const apiService = {
     });
     if (!response.ok) throw new Error('Failed to fetch leaderboard');
     return response.json();
+  },
+
+  async completeLearningDay(skill: string, dayNumber: number, score: number) {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/api/learning-path/complete`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ skill, dayNumber, score })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to complete day');
+    }
+    return response.json();
   }
 };
